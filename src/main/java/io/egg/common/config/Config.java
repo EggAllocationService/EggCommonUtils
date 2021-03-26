@@ -60,6 +60,9 @@ public class Config {
         if (versionAnnotation == null) {
             throw new InvalidConfigException("Config does not have a version annotation");
         }
+        if (version != versionAnnotation.version()) {
+            System.out.println("Version mismatch, some settings may be reset to defaults.");
+        }
         int fields = bb.readInt();
         for (int i = 0; i < fields; i++) {
             String name = bb.readUTF();
