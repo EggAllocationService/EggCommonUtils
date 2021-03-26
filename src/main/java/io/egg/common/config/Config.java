@@ -1,10 +1,12 @@
 package io.egg.common.config;
 
+import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import io.egg.common.fields.FieldDelegate;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -13,6 +15,7 @@ public class Config {
     /*
     Byte format:
     int version
+    int fields;
     Field[]
         int namelength
         byte[] name - UTF-8 string
@@ -32,6 +35,7 @@ public class Config {
             throw new Exception("Config does not have a version annotation");
         }
         bb.writeInt(versionAnnotation.version());
+        bb.writeInt(fields.length);
         for (Field f : fields) {
             FieldDelegate s = delegates.get(f.getType());
             if (s == null) {
@@ -39,8 +43,8 @@ public class Config {
                 continue;
             }
             byte[] data = s.serialize(f.get(o));
-            bb.write(stringToBytes(f.getName()));
-            bb.write(stringToBytes(f.getType().getName()));
+            bb.writeUTF(f.getName());
+            bb.writeUTF(f.getType().getName());
             bb.writeInt(data.length);
             bb.write(data);
         }
@@ -48,12 +52,24 @@ public class Config {
 
     }
 
+    public static <T> T load(byte[] data, Class<T> clazz) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException, InvalidConfigException {
+        T o = clazz.getConstructor().newInstance();
+        ByteArrayDataInput bb = ByteStreams.newDataInput(data);
+        int version = bb.readInt();
+        ConfigClass versionAnnotation = clazz.getAnnotation(ConfigClass.class);
+        if (versionAnnotation == null) {
+            throw new InvalidConfigException("Config does not have a version annotation");
+        }
+        int fields = bb.readInt();
+        for (int i = 0; i < fields; i++) {
+            String name = bb.readUTF();
+            try {
 
-
-    private static byte[] stringToBytes(String s) {
-        ByteBuffer bb = ByteBuffer.allocate(s.getBytes(StandardCharsets.UTF_8).length + 4);
-        bb.putInt(s.getBytes(StandardCharsets.UTF_8).length);
-        bb.put(s.getBytes(StandardCharsets.UTF_8));
-        return bb.array();
+            }
+        }
+        return o;
     }
+
+
+
 }
